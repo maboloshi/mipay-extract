@@ -261,21 +261,30 @@ extract() {
     work_dir="$PWD/deodex"
     trap "clean \"$work_dir\"" INT
     rm -Rf deodex
-    mkdir -p deodex/system
+
+    if [[ $($sevenzip l "$img" "system/build.prop" | grep build.prop) ]]; then
+        mkdir -p deodex/
+        system="system/"
+        deodex_system="deodex/"
+    else
+        mkdir -p deodex/system
+        system=""
+        deodex_system=deodex/system/
+    fi
 
     echo "--> copying apps"
-    $sevenzip x -odeodex/system/ "$img" build.prop >/dev/null || clean "$work_dir"
+    $sevenzip x -o${deodex_system} "$img" ${system}build.prop >/dev/null || clean "$work_dir"
     file_list="$($sevenzip l "$img" priv-app/Weather)"
     if [[ "$file_list" == *Weather* ]]; then
         apps="$apps Weather"
     fi
     for f in $apps; do
         echo "----> copying $f..."
-        $sevenzip x -odeodex/system/ "$img" priv-app/$f >/dev/null || clean "$work_dir"
+        $sevenzip x -o${deodex_system} "$img" ${system}priv-app/$f >/dev/null || clean "$work_dir"
     done
     for f in $priv_apps; do
         echo "----> copying $f..."
-        $sevenzip x -odeodex/system/ "$img" $f >/dev/null || clean "$work_dir"
+        $sevenzip x -o${deodex_system} "$img" ${system}$f >/dev/null || clean "$work_dir"
     done
     arch="arm64"
     for f in $apps; do
@@ -289,7 +298,7 @@ extract() {
     if [[ "$file_list" == *Weather* ]]; then
     echo "--> patching weather"
     rm -f ../weather-*.apk
-    $sevenzip x -odeodex/system/ "$img" data-app/Weather >/dev/null || clean "$work_dir"
+    $sevenzip x -o${deodex_system} "$img" ${system}data-app/Weather >/dev/null || clean "$work_dir"
     cp deodex/system/data-app/Weather/Weather.apk ../weather-$model-$ver-orig.apk
     deodex "$work_dir" Weather "$arch" data-app || clean "$work_dir"
     mv deodex/system/data-app/Weather/Weather.apk ../weather-$model-$ver-mod.apk
