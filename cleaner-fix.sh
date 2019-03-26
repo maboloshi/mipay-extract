@@ -12,11 +12,6 @@ case $key in
     echo "--> Increase threshold (50M) to prevent high cpu of traffic monitoring"
     shift
     ;;
-    --clock)
-    regular_apps="DeskClock $regular_apps"
-    echo "--> Modify Clock to support work day alarms"
-    shift
-    ;;
     --nofbe)
     NO_EXTRA_FBE="yes"
     shift
@@ -29,6 +24,7 @@ esac
 done
 
 mipay_apps="Calendar SecurityCenter"
+EXTRA_PRIV="app/DeskClock $EXTRA_PRIV"
 private_apps=""
 [ -z "$EXTRA_PRIV" ] || private_apps="$private_apps $EXTRA_PRIV"
 
@@ -243,7 +239,6 @@ extract() {
     file=$3
     apps=$4
     priv_apps=$5
-    regular_apps=$6
     dir=miuieu-$model-$ver
     img=$dir-system.img
 
@@ -287,10 +282,6 @@ extract() {
         echo "----> copying $f..."
         $sevenzip x -odeodex/system/ "$img" priv-app/$f >/dev/null || clean "$work_dir"
     done
-    for f in $regular_apps; do
-        echo "----> copying $f..."
-        $sevenzip x -odeodex/system/ "$img" app/$f >/dev/null || clean "$work_dir"
-    done
     for f in $priv_apps; do
         echo "----> copying $f..."
         $sevenzip x -odeodex/system/ "$img" $f >/dev/null || clean "$work_dir"
@@ -298,9 +289,6 @@ extract() {
     arch="arm64"
     for f in $apps; do
         deodex "$work_dir" "$f" "$arch" priv-app || clean "$work_dir"
-    done
-    for f in $regular_apps; do
-        deodex "$work_dir" "$f" "$arch" app || clean "$work_dir"
     done
     for f in $priv_apps; do
         deodex "$work_dir" "$(basename $f)" "$arch" "$(dirname $f)" || clean "$work_dir"
@@ -361,7 +349,7 @@ for f in *.zip; do
     fi
     model=${arr[2]}
     ver=${arr[3]}
-    extract $model $ver $f "$mipay_apps" "$private_apps" "$regular_apps"
+    extract $model $ver $f "$mipay_apps" "$private_apps"
     hasfile=true
 done
 
