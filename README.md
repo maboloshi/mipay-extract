@@ -10,7 +10,16 @@ Put MIUI 9 China Rom (OTA zip package) in the directory and double-click `extrac
 
 Additionally, if you want to recover Chinese functions, e.g. bus card shortcut or quick payments for WeChat/Alipay in "App Vault" (i.e. the leftmost shortcut page on home screen), you can add an option `--appvault`: `extract.bat --appvault` (Windows) or `./extract.sh --appvault` (macOS and Linux). An extra flashable zip file with prefix `eufix-appvault` will be generated.
 
-Support Windows, Linux and macOS (10.10 or above). Windows version has all dependencies included. For macOS, you need Java 8 runtime. For Linux, you may need both Java 8 and Python 2.7. For example, you can install all dependencies using `apt-get`:
+Support Windows, Linux and macOS (10.10 or above).
+
+- For Windows, it has all dependencies included.
+- For macOS, you need Java 8 runtime. For example, if you installed [`homebrew`](https://brew.sh/), you can install java 8 using `brew`:
+
+```bash
+brew tap homebrew/cask-versions
+brew cask install java8
+```
+ - For Linux, you may need both Java 8 and Python 2.7. For example, you can install all dependencies using `apt-get`:
 
 ```bash
 apt-get install -y openjdk-8-jre python2.7
