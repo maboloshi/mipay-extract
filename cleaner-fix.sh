@@ -23,7 +23,7 @@ case $key in
 esac
 done
 
-mipay_apps="Calendar SecurityCenter"
+mipay_apps="Calendar SecurityCenter Weather"
 EXTRA_PRIV="app/DeskClock $EXTRA_PRIV"
 private_apps=""
 [ -z "$EXTRA_PRIV" ] || private_apps="$private_apps $EXTRA_PRIV"
@@ -101,7 +101,7 @@ popd() {
 update_international_build_flag() {
     path=$1
     pattern="Lmiui/os/Build;->IS_INTERNATIONAL_BUILD"
-    
+
     if [ -d $path ]; then
         found=()
         if [[ "$OSTYPE" == "cygwin"* ]]; then
@@ -274,10 +274,6 @@ extract() {
 
     echo "--> copying apps"
     $sevenzip x -odeodex/system/ "$img" build.prop >/dev/null || clean "$work_dir"
-    file_list="$($sevenzip l "$img" priv-app/Weather)"
-    if [[ "$file_list" == *Weather* ]]; then
-        apps="$apps Weather"
-    fi
     for f in $apps; do
         echo "----> copying $f..."
         $sevenzip x -odeodex/system/ "$img" priv-app/$f >/dev/null || clean "$work_dir"
@@ -293,18 +289,6 @@ extract() {
     for f in $priv_apps; do
         deodex "$work_dir" "$(basename $f)" "$arch" "$(dirname $f)" || clean "$work_dir"
     done
-
-    file_list="$($sevenzip l "$img" data-app/Weather)"
-    if [[ "$file_list" == *Weather* ]]; then
-    echo "--> patching weather"
-    rm -f ../weather-*.apk
-    $sevenzip x -odeodex/system/ "$img" data-app/Weather >/dev/null || clean "$work_dir"
-    cp deodex/system/data-app/Weather/Weather.apk ../weather-$model-$ver-orig.apk
-    deodex "$work_dir" Weather "$arch" data-app || clean "$work_dir"
-    mv deodex/system/data-app/Weather/Weather.apk ../weather-$model-$ver-mod.apk
-    rm -rf deodex/system/data-app/
-    fi
-
     echo "--> packaging flashable zip"
     pushd deodex
     ubin=META-INF/com/google/android/update-binary
