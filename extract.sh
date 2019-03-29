@@ -353,9 +353,8 @@ extract() {
     done
     archs="arm64 x86_64 arm x86"
     arch="arm64"
-    frame="$($sevenzip l "$img" ${system}framework)"
     for i in $archs; do
-        if [[ "$frame" == *"$i"* ]]; then
+        if [[ $($sevenzip l "$img" "${system}framework/$i/boot.art" | grep boot.art) ]]; then
             arch=$i
             echo "--> framework arch: $arch"
             break
