@@ -88,18 +88,19 @@ fi
 }
 cd "$tmp"
 
+[ -f system/build.prop ] && system_dir=/system || system_dir=/system/system
 app_list=""
 for f in ./system/priv-app/*; do
-    app_list="${app_list} /system/priv-app/$(basename $f)"
+    app_list="${app_list} ${system_dir}/priv-app/$(basename $f)"
 done
 if [ -d ./system/app ]; then
     for f in ./system/app/*; do
-        app_list="${app_list} /system/app/$(basename $f)"
+        app_list="${app_list} ${system_dir}/app/$(basename $f)"
     done
 fi
 if [ -d ./system/framework ]; then
     for f in ./system/framework/*; do
-        app_list="${app_list} /system/framework/$(basename $f)"
+        app_list="${app_list} ${system_dir}/framework/$(basename $f)"
     done
 fi
 
@@ -107,12 +108,12 @@ print "Clean files..."
 rm -rf $app_list
 
 print "Adding files..."
-cp -R ./system/priv-app/* /system/priv-app/ || abort "Failed to copy priv-apps"
+cp -R ./system/priv-app/* ${system_dir}/priv-app/ || abort "Failed to copy priv-apps"
 if [ -d ./system/app ]; then
-    cp -R ./system/app/* /system/app/ || abort "Failed to copy apps"
+    cp -R ./system/app/* ${system_dir}/app/ || abort "Failed to copy apps"
 fi
 if [ -d ./system/framework ]; then
-    cp -R ./system/framework/* /system/framework/ || abort "Failed to copy frameworks"
+    cp -R ./system/framework/* ${system_dir}/framework/ || abort "Failed to copy frameworks"
 fi
 
 print "Setting correct permissions..."

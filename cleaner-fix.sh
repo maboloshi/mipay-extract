@@ -270,17 +270,26 @@ extract() {
     work_dir="$PWD/deodex"
     trap "clean \"$work_dir\"" INT
     rm -Rf deodex
-    mkdir -p deodex/system
+
+    if [[ $($sevenzip l "$img" "system/build.prop" | grep build.prop) ]]; then
+        mkdir -p deodex/
+        system="system/"
+        deodex_system="deodex/"
+    else
+        mkdir -p deodex/system
+        system=""
+        deodex_system=deodex/system/
+    fi
 
     echo "--> copying apps"
-    $sevenzip x -odeodex/system/ "$img" build.prop >/dev/null || clean "$work_dir"
+    $sevenzip x -o${deodex_system} "$img" ${system}build.prop >/dev/null || clean "$work_dir"
     for f in $apps; do
         echo "----> copying $f..."
-        $sevenzip x -odeodex/system/ "$img" priv-app/$f >/dev/null || clean "$work_dir"
+        $sevenzip x -o${deodex_system} "$img" ${system}priv-app/$f >/dev/null || clean "$work_dir"
     done
     for f in $priv_apps; do
         echo "----> copying $f..."
-        $sevenzip x -odeodex/system/ "$img" $f >/dev/null || clean "$work_dir"
+        $sevenzip x -o${deodex_system} "$img" ${system}$f >/dev/null || clean "$work_dir"
     done
     arch="arm64"
     for f in $apps; do

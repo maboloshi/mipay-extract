@@ -89,16 +89,17 @@ fi
 }
 cd "$tmp"
 
+[ -f system/build.prop ] && system_dir=/system || system_dir=/system/system
 app_list=""
 for f in ./system/app/*; do
-    app_list="${app_list} /system/app/$(basename $f)"
+    app_list="${app_list} ${system_dir}/app/$(basename $f)"
 done
 
 print "Clean files..."
 rm -rf $app_list
 
 print "Adding files..."
-cp -R ./system/app/* /system/app/ || abort "Failed copy apps"
+cp -R ./system/app/* ${system_dir}/app/ || abort "Failed copy apps"
 #mkdir_symlink
 
 print "Setting correct permissions..."

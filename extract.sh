@@ -255,7 +255,7 @@ deodex() {
             if ! grep -q ELF $f; then
                 fname=$(basename $f)
                 orig="$(cat $f)"
-                imgpath="${orig#*system/}"
+                [ $has_system_start ] && imgpath="${orig#/}" || imgpath="${orig#*system/}"
                 imglist="$($sevenzip l "$system_img" "$imgpath")"
                 if [[ "$imglist" == *"$imgpath"* ]]; then
                     echo "----> copy native library $fname"
@@ -325,13 +325,23 @@ extract() {
     work_dir="$PWD/deodex"
     trap "clean \"$work_dir\"" INT
     rm -Rf deodex
-    mkdir -p deodex/system
+
+    if [[ $($sevenzip l "$img" "system/build.prop" | grep build.prop) ]]; then
+        mkdir -p deodex/
+        system="system/"
+        deodex_system="deodex/"
+        has_system_start=true
+    else
+        mkdir -p deodex/system
+        system=""
+        deodex_system=deodex/system/
+    fi
 
     echo "--> copying apps"
-    $sevenzip x -odeodex/system/ "$img" build.prop >/dev/null || clean "$work_dir"
+    $sevenzip x -o${deodex_system} "$img" ${system}build.prop >/dev/null || clean "$work_dir"
     for f in $apps; do
         echo "----> copying $f..."
-        $sevenzip x -odeodex/system/ "$img" app/$f >/dev/null || clean "$work_dir"
+        $sevenzip x -o${deodex_system} "$img" ${system}app/$f >/dev/null || clean "$work_dir"
     done
     echo "system/priv-app" > "$work_dir"/$privapp
     echo "$privapp" >> "$work_dir"/$privapp
@@ -339,19 +349,18 @@ extract() {
         echo "----> copying $f..."
         has_priv_apps=true
         echo "system/$f" >> "$work_dir"/$privapp
-        $sevenzip x -odeodex/system/ "$img" $f >/dev/null || clean "$work_dir"
+        $sevenzip x -o${deodex_system} "$img" ${system}$f >/dev/null || clean "$work_dir"
     done
     archs="arm64 x86_64 arm x86"
     arch="arm64"
-    frame="$($sevenzip l "$img" framework)"
     for i in $archs; do
-        if [[ "$frame" == *"$i"* ]]; then
+        if [[ $($sevenzip l "$img" "${system}framework/$i/boot.art" | grep boot.art) ]]; then
             arch=$i
             echo "--> framework arch: $arch"
             break
         fi
     done
-    $sevenzip x -odeodex/system/ "$img" framework/$arch >/dev/null || clean "$work_dir"
+    $sevenzip x -o${deodex_system} "$img" ${system}framework/$arch >/dev/null || clean "$work_dir"
     rm -f "$work_dir"/{$libmd,$libln}
     touch "$work_dir"/{$libmd,$libln}
     for f in $apps; do
