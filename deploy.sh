@@ -36,7 +36,7 @@ if [[ "$1" == "rom" ]]; then
 fi
 for i in "${urls[@]}"
 do
-   bash extract.sh --appvault "$i" || exit 1
+   bash -c "export EXTRA_PRIV="app/SogouInput"; ./extract.sh --appvault "$i"" || exit 1
 done
 [[ "$1" == "keep"  ]] || rm -rf miui-*/ miui_*.zip
 for i in "${eu_urls[@]}"
