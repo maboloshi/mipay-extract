@@ -89,7 +89,7 @@ fi
 }
 cd "$tmp"
 
-[ -f system/build.prop ] && system_dir=/system || system_dir=/system/system
+[ -f $default_prop ] && system_dir=/system || system_dir=/system/system; default_prop=${system_dir}/build.prop
 app_list=""
 for f in ./system/app/*; do
     app_list="${app_list} ${system_dir}/app/$(basename $f)"
