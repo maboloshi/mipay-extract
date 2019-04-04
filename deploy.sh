@@ -7,12 +7,12 @@ declare -a urls=(
 
 )
 
-EU_VER=9.3.28
+EU_VER=9.4.1
 
 declare -a eu_urls=(
 
 # EU Rom URLs
-'https://jaist.dl.sourceforge.net/project/xiaomi-eu-multilang-miui-roms/xiaomi.eu/MIUI-WEEKLY-RELEASES/9.3.28/xiaomi.eu_multi_MI9_9.3.28_v10-9.zip'
+'https://jaist.dl.sourceforge.net/project/xiaomi-eu-multilang-miui-roms/xiaomi.eu/MIUI-WEEKLY-RELEASES/9.4.1/xiaomi.eu_multi_MI9_9.4.1_v10-9.zip'
 
 )
 
