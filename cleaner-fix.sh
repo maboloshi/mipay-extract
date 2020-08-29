@@ -12,6 +12,11 @@ case $key in
     echo "--> Increase threshold (50M) to prevent high cpu of traffic monitoring"
     shift
     ;;
+    --clock)
+    EXTRA_PRIV="app/DeskClock $EXTRA_PRIV"
+    echo "--> Modify Clock to support work day alarms"
+    shift
+    ;;
     --nofbe)
     NO_EXTRA_FBE="yes"
     shift
@@ -40,6 +45,8 @@ sign="java -Xmx${heapsize}m -jar $tool_dir/apksigner.jar sign \
 aria2c_opts="--check-certificate=false --file-allocation=trunc -s10 -x10 -j10 -c"
 aria2c="aria2c $aria2c_opts"
 sed="sed"
+imgroot=""
+imgexroot="system/"
 
 exists() {
   command -v "$1" >/dev/null 2>&1
@@ -97,6 +104,44 @@ popd() {
     command popd "$@" > /dev/null
 }
 
+update_international_build_flag() {
+    path=$1
+    pattern="Lmiui/os/Build;->IS_INTERNATIONAL_BUILD"
+    
+    if [ -d $path ]; then
+        found=()
+        if [[ "$OSTYPE" == "cygwin"* ]]; then
+            pushd "$path"
+            cmdret="$(/cygdrive/c/Windows/System32/findstr.exe /sm /c:${pattern} '*.*' | tr -d '\015')"
+            popd
+            result="${cmdret//\\//}"
+            while read i; do
+                found+=("${path}/$i")
+            done <<< "$result"
+        else
+            files="$(find $path -type f -iname "*.smali")"
+            while read i; do
+                if grep -q -F "$pattern" $i; then
+                    found+=("$i")
+                fi
+            done <<< "$files"
+        fi
+    fi
+    if [ -f $path ]; then
+        found=($path)
+    fi
+
+    for i in "${found[@]}"; do
+        $sed -i 's|sget-boolean \([a-z]\)\([0-9]\+\), Lmiui/os/Build;->IS_INTERNATIONAL_BUILD:Z|const/4 \1\2, 0x0|g' "$i" \
+            || return 1
+        if grep -q -F "$pattern" $i; then
+            echo "----> ! failed to patch: $(basename $i)"
+        else
+            echo "----> patched smali: $(basename $i)"
+        fi
+    done
+}
+
 deodex() {
     app=$2
     base_dir="$1"
@@ -128,34 +173,7 @@ deodex() {
 
             if [[ "$app" == "Weather" ]]; then
                 echo "----> searching smali..."
-                pattern="Lmiui/os/Build;->IS_INTERNATIONAL_BUILD"
-                findroot="$apkdir/smali/com/miui/weather2"
-                found=()
-                if [[ "$OSTYPE" == "cygwin"* ]]; then
-                    pushd "$findroot"
-                    cmdret="$(findstr /sm /c:${pattern} '*.*' | tr -d '\015')"
-                    popd
-                    result="${cmdret//\\//}"
-                    while read i; do
-                        found+=("${findroot}/$i")
-                    done <<< "$result"
-                else
-                    files="$(find $findroot -type f -iname "*.smali")"
-                    while read i; do
-                        if grep -q -F "$pattern" $i; then
-                            found+=("$i")
-                        fi
-                    done <<< "$files"
-                fi
-                for i in "${found[@]}"; do
-                    $sed -i 's|sget-boolean \([a-z]\)\([0-9]\+\), Lmiui/os/Build;->IS_INTERNATIONAL_BUILD:Z|const/4 \1\2, 0x0|g' "$i" \
-                      || return 1
-                    if grep -q -F "$pattern" $i; then
-                        echo "----> ! failed to patch: $(basename $i)"
-                    else
-                        echo "----> patched smali: $(basename $i)"
-                    fi
-                done
+                update_international_build_flag "$apkdir/smali/com/miui/weather2"
                 i="$apkdir/smali/com/miui/weather2/tools/ToolUtils.smali"
                 if [ -f "$i" ]; then
                     $patchmethod "$i" -canRequestCommercial -canRequestCommercialInfo || return 1
@@ -163,15 +181,13 @@ deodex() {
             fi
 
             if [[ "$app" == "SecurityCenter" ]]; then
-                i="$apkdir/smali/com/miui/antivirus/activity/SettingsActivity.smali"
-                $sed -i 's|sget-boolean \([a-z]\)\([0-9]\+\), Lmiui/os/Build;->IS_INTERNATIONAL_BUILD:Z|const/4 \1\2, 0x0|g' "$i" \
-                  || return 1
+                update_international_build_flag "$apkdir/smali/com/miui/antivirus/activity/SettingsActivity.smali"
+            fi
 
-                if grep -q -F 'Lmiui/os/Build;->IS_INTERNATIONAL_BUILD' $i; then
-                    echo "----> ! failed to patch: $(basename $i)"
-                else
-                    echo "----> patched smali: $(basename $i)"
-                fi
+            if [[ "$app" == "DeskClock" ]]; then
+                echo "----> searching smali..."
+                update_international_build_flag "$apkdir/smali/com/android/deskclock/settings/SettingsActivity.smali"
+                update_international_build_flag "$apkdir/smali/com/android/deskclock/util/Util.smali"
             fi
 
             if [[ "$app" == "services.jar" ]]; then
@@ -263,19 +279,26 @@ extract() {
     rm -Rf deodex
     mkdir -p deodex/system
 
+    detect="$($sevenzip l "$img" system/build.prop)"
+    if [[ "$detect" == *"build.prop"* ]]; then
+        echo "--> detected new image structure"
+        imgroot="system/"
+        imgexroot=""
+    fi
+
     echo "--> copying apps"
-    $sevenzip x -odeodex/system/ "$img" build.prop >/dev/null || clean "$work_dir"
-    file_list="$($sevenzip l "$img" priv-app/Weather)"
+    $sevenzip x -odeodex/${imgexroot} "$img" ${imgroot}build.prop >/dev/null || clean "$work_dir"
+    file_list="$($sevenzip l "$img" ${imgroot}priv-app/Weather)"
     if [[ "$file_list" == *Weather* ]]; then
         apps="$apps Weather"
     fi
     for f in $apps; do
         echo "----> copying $f..."
-        $sevenzip x -odeodex/system/ "$img" priv-app/$f >/dev/null || clean "$work_dir"
+        $sevenzip x -odeodex/${imgexroot} "$img" ${imgroot}priv-app/$f >/dev/null || clean "$work_dir"
     done
     for f in $priv_apps; do
         echo "----> copying $f..."
-        $sevenzip x -odeodex/system/ "$img" $f >/dev/null || clean "$work_dir"
+        $sevenzip x -odeodex/${imgexroot} "$img" ${imgroot}$f >/dev/null || clean "$work_dir"
     done
     arch="arm64"
     for f in $apps; do
@@ -285,11 +308,11 @@ extract() {
         deodex "$work_dir" "$(basename $f)" "$arch" "$(dirname $f)" || clean "$work_dir"
     done
 
-    file_list="$($sevenzip l "$img" data-app/Weather)"
+    file_list="$($sevenzip l "$img" ${imgroot}data-app/Weather)"
     if [[ "$file_list" == *Weather* ]]; then
     echo "--> patching weather"
     rm -f ../weather-*.apk
-    $sevenzip x -odeodex/system/ "$img" data-app/Weather >/dev/null || clean "$work_dir"
+    $sevenzip x -odeodex/${imgexroot} "$img" ${imgroot}data-app/Weather >/dev/null || clean "$work_dir"
     cp deodex/system/data-app/Weather/Weather.apk ../weather-$model-$ver-orig.apk
     deodex "$work_dir" Weather "$arch" data-app || clean "$work_dir"
     mv deodex/system/data-app/Weather/Weather.apk ../weather-$model-$ver-mod.apk
